@@ -6,7 +6,7 @@ __pycache__/
 # PDF processing artifacts
 chunks.pkl
 embeddings.npy
-*.txt
+test.txt
 
 # VSCode & PyCharm
 .vscode/
