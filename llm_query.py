@@ -84,5 +84,5 @@ def process_query(user_query, top_n=5):
     return result
 
 if __name__ == "__main__":
-    query = "Do you cover expensive surgeries with robots?"
+    query = "Normal delivery expenses claim under maternity benefit"
     process_query(query)

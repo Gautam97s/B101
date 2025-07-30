@@ -1,16 +1,23 @@
-# === build_embeddings.py ===
+import os
 from extract import extract_from_multiple_pdfs
 from chunking import prepare_chunks
 from embedding import get_chunk_embeddings, save_embeddings_and_chunks
 
 if __name__ == "__main__":
+    pdf_dir = "Docs"
+
+    # Get all .pdf files in Docs/
     pdf_files = [
-        "BAJHLIP23020V012223.pdf",
-        "CHOTGDP23004V012223.pdf",
-        "EDLHLGA23009V012223.pdf",
-        "HDFHLIP23024V072223.pdf",
-        "ICIHLIP22012V012223.pdf"
+        os.path.join(pdf_dir, f)
+        for f in os.listdir(pdf_dir)
+        if f.lower().endswith(".pdf")
     ]
+
+    if not pdf_files:
+        print("No PDF files found in 'Docs/' folder.")
+        exit(1)
+
+    print(f"Found {len(pdf_files)} PDF(s).")
 
     # Step 1: Extract text
     all_texts = extract_from_multiple_pdfs(pdf_files)
