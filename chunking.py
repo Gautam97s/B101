@@ -1,13 +1,15 @@
-# === chunking.py ===
 import re
 
 def clean_text(text: str) -> str:
+    """
+    Clean up text by normalizing spaces and line breaks.
+    """
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
 def chunk_text_by_length(text: str, chunk_size=800, overlap=100) -> list:
     """
-    Chunk text into overlapping pieces.
+    Split text into overlapping chunks for embedding.
     """
     chunks = []
     start = 0
@@ -21,12 +23,13 @@ def chunk_text_by_length(text: str, chunk_size=800, overlap=100) -> list:
 
 def prepare_chunks(all_texts: dict) -> list:
     """
-    Returns list of dicts: [{"doc": filename, "content": chunk}, ...]
+    Accepts dict of filename/url -> text.
+    Returns list of dicts: [{"doc": filename/url, "chunk": text_chunk}, ...]
     """
     all_chunks = []
-    for filename, text in all_texts.items():
+    for doc_name, text in all_texts.items():
         text = clean_text(text)
         chunks = chunk_text_by_length(text)
         for c in chunks:
-            all_chunks.append({"doc": filename, "content": c})
+            all_chunks.append({"doc": doc_name, "chunk": c})
     return all_chunks

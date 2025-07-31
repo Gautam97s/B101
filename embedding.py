@@ -4,10 +4,15 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 def get_chunk_embeddings(chunks: list, model_name="all-MiniLM-L6-v2"):
+    """
+    Generate embeddings for chunks.
+    Expects each chunk to have keys: {"doc": "...", "chunk": "..."}
+    """
     model = SentenceTransformer(model_name)
-    texts = [c["content"] for c in chunks]
+    texts = [c["chunk"] for c in chunks]   # <-- updated key
     embeddings = model.encode(texts, show_progress_bar=True, normalize_embeddings=True)
     return embeddings
+
 
 def save_embeddings_and_chunks(embeddings, chunks, embed_file="embeddings.npy", chunk_file="chunks.pkl"):
     np.save(embed_file, embeddings)
