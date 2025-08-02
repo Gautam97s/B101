@@ -4,8 +4,6 @@ __pycache__/
 *.so
 
 # PDF processing artifacts
-chunks.pkl
-embeddings.npy
 test.txt
 
 # VSCode & PyCharm
