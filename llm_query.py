@@ -3,16 +3,20 @@ import re
 import requests
 from semanticSearch import semantic_search, load_embeddings_and_chunks
 
+
 def query_llm(user_query, context, model_name="llama3"):
     """
-    Send query + retrieved context to Ollama and return parsed JSON
+    Send query + retrieved context to Ollama and return parsed JSON.
+    Robustly handles streaming JSON, decoding errors, and logs failures.
     """
     prompt = f"""
 Based on the following insurance policy clauses and this query:
 Query: {user_query}
 
+
 Policy Context (with sources):
 {context}
+
 
 ONLY return a valid JSON object in this format (no extra text):
 {{
@@ -35,22 +39,38 @@ If no relevant clause is found, set cited_clauses to ["No direct clause found"].
         raw = ""
         for line in response.iter_lines():
             if line:
-                data = json.loads(line.decode("utf-8"))
-                raw += data.get("response", "")
+                decoded_line = line.decode("utf-8")
+                try:
+                    data = json.loads(decoded_line)
+                    raw += data.get("response", "")
+                except json.JSONDecodeError:
+                    # Log malformed JSON line but continue accumulating
+                    with open("output.txt", "a") as f:
+                        f.write(f"Warning: Failed to decode JSON line from stream: {decoded_line}\n")
     except Exception as e:
         print("Error calling Ollama API:", e)
+        with open("output.txt", "a") as f:
+            f.write(f"Error calling Ollama API: {str(e)}\n")
         return None
 
-    # --- Try JSON parsing ---
-    raw = re.sub(r'(\d),(\d)', r'\1\2', raw)
+    # Be cautious with this regex. Commenting out unless needed:
+    # raw = re.sub(r'(\d),(\d)', r'\1\2', raw)
 
     try:
         return json.loads(raw)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        # Attempt heuristic extraction of JSON substring
         match = re.search(r'\{[\s\S]*\}', raw)
         if match:
-            cleaned = re.sub(r'(\d),(\d)', r'\1\2', match.group(0))
-            return json.loads(cleaned)
+            cleaned = match.group(0)
+            try:
+                return json.loads(cleaned)
+            except json.JSONDecodeError as e2:
+                with open("output.txt", "a") as f:
+                    f.write(f"JSON extraction failed on cleaned substring: {str(e2)}\nRaw substring:\n{cleaned}\n")
+        # Log the failure and raw output
+        with open("output.txt", "a") as f:
+            f.write(f"JSON extraction failed: {str(e)}\nRaw output:\n{raw}\n")
         print("JSON extraction failed.\nRaw output:\n", raw)
         return None
 
@@ -71,10 +91,11 @@ def process_query(user_query, top_n=5):
 
     result = query_llm(user_query, context)
 
-    # Ensure source_docs present
+    # Ensure source_docs present in the result
     if result and "source_docs" not in result:
         result["source_docs"] = source_docs
 
+    # Uncomment below to print search result snippets for debugging
     # print("\n--- Semantic Search Results ---")
     # for c in top_chunks:
     #     print(f"\n[Doc: {c['doc']}] (score: {c['score']:.4f})\n{c['chunk'][:300]}...")

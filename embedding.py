@@ -26,3 +26,7 @@ def load_embeddings_and_chunks(embed_file="embeddings.npy", chunk_file="chunks.p
         chunks = pickle.load(f)
     print(f"Loaded embeddings {embeddings.shape} and {len(chunks)} chunks")
     return embeddings, chunks
+
+def embed_single_query(query, model_name="all-MiniLM-L6-v2"):
+    model = SentenceTransformer(model_name)
+    return model.encode([query], normalize_embeddings=True)[0]

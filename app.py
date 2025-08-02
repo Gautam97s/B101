@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
 from typing import List
 import os
@@ -16,7 +16,7 @@ from llm_query import query_llm
 load_dotenv()
 API_TOKEN = os.getenv("TOKEN")
 
-app = APIRouter(prefix="/api/v1")
+app = FastAPI(root_path="/api/v1")
 
 # Preload local embeddings & chunks
 local_embeddings, local_chunks = load_embeddings_and_chunks()
@@ -27,14 +27,15 @@ class HackathonRequest(BaseModel):
 
 @app.post("/hackrx/run")
 def run_hackathon(request: HackathonRequest, authorization: str = Header(None)):
-    # === Auth check (skip if no TOKEN in .env) ===
+    # === Authentication check ===
     if API_TOKEN and authorization != f"Bearer {API_TOKEN}":
         raise HTTPException(status_code=401, detail="Unauthorized")
 
+    # Default to using local embeddings unless we dynamically process a doc
     use_local = False
     chunks, embeddings = None, None
 
-    # --- If URL is provided, try dynamic processing ---
+    # --- Handle dynamic document URL ---
     if request.documents:
         try:
             response = requests.get(request.documents, timeout=10)
@@ -45,7 +46,7 @@ def run_hackathon(request: HackathonRequest, authorization: str = Header(None)):
             reader = PdfReader(pdf_file)
             text = "".join([page.extract_text() or "" for page in reader.pages])
 
-            # Dynamic chunking & embeddings
+            # Dynamic chunking & embeddings (not stored in Pinecone for this run)
             chunks = prepare_chunks({"url_doc": text})
             embeddings = get_chunk_embeddings(chunks)
         except Exception as e:
@@ -54,18 +55,20 @@ def run_hackathon(request: HackathonRequest, authorization: str = Header(None)):
     else:
         use_local = True
 
+    # Use precomputed local embeddings if no document URL or error occurred
     if use_local:
         print("Falling back to local precomputed embeddings.")
         chunks, embeddings = local_chunks, local_embeddings
 
     answers = []
     for q in request.questions:
+        # --- Semantic search (Pinecone -> fallback) ---
         top_chunks = semantic_search(q, embeddings, chunks, top_n=3)
 
-        # Build context for LLM
+        # --- Build context for LLM ---
         context = "\n".join([f"[Source: {c['doc']}]\n{c['chunk']}" for c in top_chunks])
 
-        # Query LLM to generate answer
+        # --- LLM reasoning ---
         llm_result = query_llm(q, context)
         answers.append(llm_result["justification"] if llm_result and "justification" in llm_result
                        else "No relevant information found.")
