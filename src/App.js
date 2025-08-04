@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import './App.css';
 
 function App() {
@@ -6,6 +6,7 @@ function App() {
   const [queryInputs, setQueryInputs] = useState([{ id: 1, value: '' }]);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const processingStartTime = useRef(null);
 
   const addQueryBox = () => {
     setQueryInputs([...queryInputs, { id: Date.now(), value: '' }]);
@@ -31,15 +32,20 @@ function App() {
       return;
     }
 
+    processingStartTime.current = new Date();
     setLoading(true);
     setResults([]);
     
     // Simulate API processing for all queries
     setTimeout(() => {
+      const processingEndTime = new Date();
+      const processingTime = (processingEndTime - processingStartTime.current) / 1000;
+      
       const processedResults = queryInputs.map(input => ({
         query: input.value,
         eligible: input.value.length > 5 && documentUrl.startsWith('http'),
-        documentUrl
+        documentUrl,
+        processingTime: processingTime.toFixed(2) + 's'
       }));
       
       setResults(processedResults);
@@ -48,7 +54,7 @@ function App() {
   };
 
   return (
-    <div className="app">
+    <div className={`app ${loading ? 'loading' : ''}`}>
       <h1>Insurance Query Checker</h1>
       
       <form className="query-form">
@@ -86,6 +92,7 @@ function App() {
                     type="button"
                     onClick={() => removeQueryBox(input.id)}
                     className="remove-btn"
+                    aria-label="Remove query"
                   >
                     ×
                   </button>
@@ -101,6 +108,7 @@ function App() {
             type="button"
             onClick={addQueryBox}
             className="secondary"
+            disabled={loading}
           >
             + Add Another Query
           </button>
@@ -110,10 +118,25 @@ function App() {
             onClick={processAllQueries}
             disabled={loading || !documentUrl || queryInputs.some(input => !input.value)}
           >
-            {loading ? 'Processing...' : 'Check All Queries'}
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                Processing...
+              </>
+            ) : (
+              'Check All Queries'
+            )}
           </button>
         </div>
       </form>
+
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="loading-overlay">
+          <div className="spinner large"></div>
+          <p>Processing your queries...</p>
+        </div>
+      )}
 
       {/* Results Display */}
       {results.length > 0 && (
@@ -130,7 +153,10 @@ function App() {
             >
               <h3>Query {index + 1}:</h3>
               <p>{result.query || <em>No query entered</em>}</p>
-              <p>Status: {result.eligible ? '✅ Eligible' : '❌ Not Eligible'}</p>
+              <div className="result-details">
+                <p>Status: {result.eligible ? '✅ Eligible' : '❌ Not Eligible'}</p>
+                <p className="processing-time">Processed in: {result.processingTime}</p>
+              </div>
             </div>
           ))}
         </div>
