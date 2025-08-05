@@ -1,0 +1,42 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+# PDF processing artifacts
+test.txt
+
+# VSCode & PyCharm
+.vscode/
+.idea/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# Environment files
+.env
+*.env
+
+# Python virtual environments
+venv/
+.env/
+.venv/
+env/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Mac and Windows extra files
+ehthumbs.db
+Desktop.ini
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+
+
